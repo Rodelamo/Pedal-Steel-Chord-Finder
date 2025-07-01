@@ -11,11 +11,19 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
+  background-color: #f8fafc; /* Light background for better contrast */
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* Container for centering content */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
 }
 
 /* Custom scrollbar */
@@ -51,6 +59,303 @@ code {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* REAL-TIME CONTROLS SECTION */
+.realtime-controls {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+  border: 1px solid #e2e8f0;
+}
+
+.realtime-controls h2 {
+  font-size: 1.8rem;
+  color: #1e293b;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+/* Position Selector */
+.position-selector {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #f8fafc;
+  border-radius: 12px;
+}
+
+.position-selector label {
+  display: block;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.5rem;
+}
+
+.position-selector input[type="range"] {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: #e2e8f0;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.position-selector input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.5);
+}
+
+.position-selector span {
+  display: block;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin-top: 0.5rem;
+}
+
+/* Current Chord Display */
+.current-chord {
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 2px solid #93c5fd;
+  text-align: center;
+}
+
+.current-chord h3 {
+  font-size: 1.1rem;
+  color: #1d4ed8;
+  margin-bottom: 0.5rem;
+}
+
+.current-chord p {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin: 0;
+}
+
+/* Pedal and Lever Controls */
+.pedal-controls, .lever-controls {
+  margin: 1.5rem 0;
+}
+
+.pedal-controls h3, .lever-controls h3 {
+  font-size: 1.25rem;
+  color: #334155;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.pedal-buttons, .lever-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.pedal-buttons button, .lever-buttons button {
+  padding: 0.8rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  min-width: 60px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.pedal-buttons button {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.pedal-buttons button.active {
+  background-color: #38bdf8;
+  color: white;
+  border-color: #0ea5e9;
+  box-shadow: 0 6px 8px rgba(56, 189, 248, 0.4);
+  transform: translateY(-2px);
+}
+
+.lever-buttons button {
+  background-color: #ede9fe;
+  color: #6d28d9;
+}
+
+.lever-buttons button.active {
+  background-color: #8b5cf6;
+  color: white;
+  border-color: #7c3aed;
+  box-shadow: 0 6px 8px rgba(139, 92, 246, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Notes Display */
+.notes-display {
+  margin-top: 1.5rem;
+}
+
+.notes-display h3 {
+  font-size: 1.25rem;
+  color: #334155;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.notes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.note-item {
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  padding: 1.2rem;
+  border-radius: 12px;
+  border: 1px solid #bae6fd;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease;
+}
+
+.note-item:hover {
+  transform: translateY(-3px);
+}
+
+.string-label {
+  display: block;
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+
+.note-value {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0c4a6e;
+}
+
+/* Chord Selector */
+.chord-selector {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background-color: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.chord-selector h2 {
+  font-size: 1.5rem;
+  color: #1e293b;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.chord-selector select {
+  display: block;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 0.8rem 1.2rem;
+  font-size: 1.1rem;
+  border: 2px solid #cbd5e1;
+  border-radius: 10px;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.3s ease;
+}
+
+.chord-selector select:focus {
+  outline: none;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+
+/* Chord Analysis */
+.chord-analysis {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+  border: 1px solid #e2e8f0;
+}
+
+.chord-analysis h3 {
+  font-size: 1.5rem;
+  color: #1e293b;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.result-item {
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.result-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+}
+
+.result-item.match {
+  border-left: 4px solid #10b981;
+  background-color: #f0fdf4;
+}
+
+.result-item.no-match {
+  border-left: 4px solid #ef4444;
+  background-color: #fef2f2;
+}
+
+.result-item h4 {
+  font-size: 1.2rem;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.result-item p {
+  color: #475569;
+  margin-bottom: 0.8rem;
+}
+
+.match-badge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  background-color: #10b981;
+  color: white;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.missing-notes {
+  color: #ef4444;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  background-color: #fee2e2;
+  border-radius: 6px;
+  display: inline-block;
 }
 
 /* Enhanced chord finder styles */
@@ -194,6 +499,18 @@ code {
     font-size: 10px;
     padding: 2px 6px;
   }
+  
+  .realtime-controls {
+    padding: 1.5rem;
+  }
+  
+  .notes-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+  
+  .results-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -201,6 +518,19 @@ code {
     width: 20px;
     height: 20px;
     font-size: 10px;
+  }
+  
+  .pedal-buttons, .lever-buttons {
+    gap: 8px;
+  }
+  
+  .pedal-buttons button, .lever-buttons button {
+    padding: 0.6rem 1rem;
+    font-size: 1rem;
+  }
+  
+  .notes-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   }
 }
 
