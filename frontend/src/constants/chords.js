@@ -1,0 +1,25 @@
+// src/constants/chords.js
+
+export const CHORD_TYPES = {
+  'Major Triad': [0, 4, 7],
+  'Minor Triad': [0, 3, 7],
+  'Diminished Triad': [0, 3, 6],
+  'Augmented Triad': [0, 4, 8],
+  'sus2 Triad': [0, 2, 7],
+  'sus4 Triad': [0, 5, 7],
+  'Lydian Triad no 5th': [0, 4, 6],
+  'Lydian Triad no 3rd': [0, 6, 7],
+  'Major 7': [0, 4, 7, 11],
+  'Minor 7': [0, 3, 7, 10],
+  'Dominant 7': [0, 4, 7, 10],
+  'Diminished 7': [0, 3, 6, 9],  
+  'Major 6': [0, 4, 7, 9],
+  'Minor 6': [0, 3, 7, 9],
+  'Dominant 7b5': [0, 4, 6, 10],
+  'Dominant 7#5': [0, 4, 8, 10],
+  'Minor Major 7': [0, 3, 7, 11],
+  'Major 9': [0, 4, 7, 11, 2],
+  'Minor 9': [0, 3, 7, 10, 2],
+  'Dominant 9': [0, 4, 7, 10, 2],
+  '6/9': [0, 4, 7, 9, 2],
+};
