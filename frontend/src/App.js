@@ -134,7 +134,8 @@ const Fretboard = ({ voicing, chordRoot, chordType }) => {
   );
 };
 
-const ChordSearch = ({ onSearch }) => {
+// Now takes loading as a prop!
+const ChordSearch = ({ onSearch, loading }) => {
   const [chordRoot, setChordRoot] = useState('C');
   const [chordType, setChordType] = useState('Major Triad');
 
@@ -178,9 +179,12 @@ const ChordSearch = ({ onSearch }) => {
 
         <button
           onClick={handleSearch}
-          className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold text-lg rounded-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 shadow-lg transition-all duration-200 transform hover:scale-105"
+          disabled={loading}
+          className={`px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold text-lg rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-200 transition-opacity duration-200
+            ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:from-blue-700 hover:to-blue-800'}
+          `}
         >
-          Find Chords
+          {loading ? "Finding..." : "Find Chords"}
         </button>
       </div>
     </div>
@@ -233,7 +237,8 @@ function App() {
           </p>
         </div>
 
-        <ChordSearch onSearch={handleSearch} />
+        {/* Pass loading to ChordSearch */}
+        <ChordSearch onSearch={handleSearch} loading={loading} />
 
         {loading && (
           <div className="text-center py-12">
