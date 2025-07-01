@@ -52,9 +52,9 @@ const Fretboard = ({ voicing, chordRoot, chordType }) => {
             const stringNum = i + 1;
             const note = notes[stringNum];
             const isChordTone = !!note;
-            const actualNote = ChordCalculator.getNoteAtFret(modifiedTuning[stringNum], fret);
-            const affectingPedals = getPedalsForString(stringNum);
-
+            const noteInfo = modifiedTuning[stringNum];
+            const actualNote = noteInfo ? ChordCalculator.getNoteAtFret(noteInfo.note, fret) : null;
+            const affectingPedals = noteInfo ? noteInfo.changedBy : [];
             return (
               <div key={stringNum} className="flex items-center space-x-4 h-8">
                 <div className="w-20 text-sm font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded">
