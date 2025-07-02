@@ -7,30 +7,53 @@ import { CHORD_TYPES } from './constants/chords';
 import { INTERVAL_NAMES } from './constants/notes';
 import { TUNING } from './constants/tuning';
 import { COPEDENT } from './constants/copedent';
+import { OVERRIDES } from './constants/overrides';
 import { ChordCalculator } from './utils/chordCalculator';
 
 const Fretboard = ({ voicing, chordRoot, chordType }) => {
   if (!voicing) return null;
 
-  const { fret, pedalCombo, notes } = voicing;
-  const modifiedTuning = ChordCalculator.applyPedalChanges(TUNING, pedalCombo);
+  const { fret, pedalCombo, notes, allStringNotes, playedStringsCount } = voicing;
 
+  // Check if a string has an override applied
+  const isOverrideString = (stringNum) => {
+    return OVERRIDES.some(override => 
+      override.string === stringNum && 
+      override.combo.every(p => pedalCombo.includes(p))
+    );
+  };
+
+  // Get override description for a specific string
+  const getOverrideDescription = (stringNum) => {
+    const override = OVERRIDES.find(o => 
+      o.string === stringNum && 
+      o.combo.every(p => pedalCombo.includes(p))
+    );
+    return override ? override.note : 'Special pitch change applied';
+  };
+
+  // Get pedals affecting a specific string
   const getPedalsForString = (stringNum) => {
     const affectingPedals = [];
     pedalCombo.forEach(pedal => {
-      if (pedal === 'C') {
-        if (COPEDENT[pedal].changes && COPEDENT[pedal].changes[stringNum]) {
+      const config = COPEDENT[pedal];
+      if (config && config.changes) {
+        const hasChange = config.changes.some(change => change.string === stringNum);
+        if (hasChange) {
           affectingPedals.push(pedal);
         }
-      } else if (COPEDENT[pedal] && COPEDENT[pedal].strings.includes(stringNum)) {
-        affectingPedals.push(pedal);
       }
     });
     return affectingPedals;
   };
 
+  // Get pedal description for tooltips
+  const getPedalDescription = (pedal) => {
+    return COPEDENT[pedal]?.description || 'No description available';
+  };
+
   return (
-    <div className="bg-white p-6 rounded-xl border-2 border-gray-300 shadow-lg mb-6">
+    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-md mb-6">
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-bold text-xl text-gray-900">
           {chordRoot} {chordType} - Fret {fret}
@@ -41,52 +64,91 @@ const Fretboard = ({ voicing, chordRoot, chordType }) => {
       </div>
 
       <div className="relative">
-        <div className="mb-6 p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-center">
-          <span className="text-base font-bold text-white">
-            🎸 Tone Bar at Fret {fret}
+        <div className="mb-4 p-3 bg-blue-100 rounded-lg text-center">
+          <span className="text-base font-medium text-blue-800">
+            Tone Bar at Fret {fret} • {playedStringsCount} Strings Used
           </span>
         </div>
 
-        <div className="space-y-3 relative">
+        <div className="space-y-4 relative">
           {Array.from({ length: 12 }, (_, i) => {
             const stringNum = i + 1;
             const note = notes[stringNum];
             const isChordTone = !!note;
-            const actualNote = ChordCalculator.getNoteAtFret(modifiedTuning[stringNum], fret);
+            const actualNote = allStringNotes[stringNum];
             const affectingPedals = getPedalsForString(stringNum);
+            const isOverride = isChordTone && isOverrideString(stringNum);
+            const overrideDescription = isOverride ? getOverrideDescription(stringNum) : '';
+            const openNote = TUNING[stringNum].replace(/\d+$/, '');
 
             return (
               <div key={stringNum} className="flex items-center space-x-4 h-8">
-                <div className="w-20 text-sm font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded">
-                  S{stringNum} - {TUNING[stringNum].replace(/\d+$/, '')}
+                {/* Increased width to prevent wrapping */}
+                <div className="w-20 text-sm font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded flex justify-between">
+                  <span>S{stringNum}</span>
+                  <span>•</span>
+                  <span>{openNote}</span>
                 </div>
 
-                <div className="flex-1 relative bg-gradient-to-r from-gray-400 to-gray-500 h-2 rounded-full">
+                <div className="flex-1 relative h-2 rounded-sm bg-gradient-to-r from-gray-200 to-gray-300 shadow-inner">
+                  {/* Fret position marker */}
                   <div
-                    className="absolute top-0 w-1 h-full bg-red-600 rounded-full shadow-md"
-                    style={{ left: `${(fret / 12) * 100}%` }}
+                    className="absolute top-0 w-0.5 h-full bg-gray-400"
+                    style={{ 
+                      left: `${(fret / 12) * 100}%`,
+                      boxShadow: '0 0 2px rgba(0,0,0,0.3)'
+                    }}
                   ></div>
 
+                  {/* Chord note indicator */}
                   {isChordTone && (
                     <div
-                      className="absolute top-1/2 transform -translate-y-1/2 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg border-2 border-white"
-                      style={{ left: `${(fret / 12) * 100 - 4}%` }}
+                      className="absolute top-1/2 transform -translate-y-1/2 w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md border-2 border-white"
+                      style={{ 
+                        left: `${(fret / 12) * 100}%`,
+                        marginLeft: '-0.875rem' // Half the circle width
+                      }}
                     >
                       {INTERVAL_NAMES[note.interval]}
                     </div>
                   )}
                 </div>
 
-                <div className="w-36 text-sm flex items-center justify-end">
+                <div className="flex items-center w-28">
                   {isChordTone ? (
-                    <div className="text-green-800 text-xs font-bold bg-green-50 px-3 py-1 rounded-lg border border-green-200 flex justify-between w-full">
-                      <span>{actualNote}</span>
-                      {affectingPedals.length > 0 && (
-                        <span className="text-green-500">{affectingPedals.join('+')}</span>
+                    <div className="flex w-full">
+                      {/* Note and pedals box (75% width) */}
+                      <div 
+                        className="text-xs font-medium px-2 py-1 rounded-l flex-grow bg-green-100 border border-green-300 text-green-800 flex justify-between"
+                        title={affectingPedals.length > 0 ? 
+                          affectingPedals.map(p => getPedalDescription(p)).join('\n') : 
+                          'No pedals affect this string'}
+                      >
+                        <span>{actualNote}</span>
+                        {affectingPedals.length > 0 && (
+                          <span className="ml-1">
+                            {affectingPedals.map(pedal => (
+                              <span key={pedal} className="border-b border-dashed border-green-700">
+                                {pedal}
+                              </span>
+                            ))}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Override indicator (25% width) */}
+                      {isOverride && (
+                        <div 
+                          className="text-xs font-bold px-2 py-1 rounded-r bg-yellow-100 border border-yellow-300 text-yellow-800 border-l-0 w-1/4 text-center flex items-center justify-center"
+                          title={overrideDescription}
+                        >
+                          OR!
+                        </div>
                       )}
                     </div>
                   ) : (
-                    <div className="text-red-600 text-xs font-bold bg-red-50 px-3 py-1 rounded-lg border border-red-200 flex justify-center items-center w-full h-full">
+                    // Non-chord tone string (always red, ignore overrides)
+                    <div className="text-xs font-medium px-2 py-1 rounded flex justify-center items-center w-full bg-red-100 border border-red-300 text-red-800">
                       ✗
                     </div>
                   )}
@@ -96,45 +158,31 @@ const Fretboard = ({ voicing, chordRoot, chordType }) => {
           })}
         </div>
 
-        {/* Fret Numbers aligned with the fret markers */}
-        <div className="relative mt-6" style={{ paddingLeft: '84px', paddingRight: '144px' }}>
-          <div className="relative w-full h-6 flex justify-between">
-            {Array.from({ length: 13 }, (_, i) => (
-              <div
-                key={i}
-                className={`text-sm w-6 text-center font-bold ${i === fret ? 'text-red-600 bg-red-100 rounded px-1' : 'text-gray-600'}`}
-                style={{ transform: 'translateX(-50%)' }}
-              >
-                {i}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-amber-100 rounded-lg border-2 border-amber-200">
-          <div className="text-base font-bold text-amber-900 mb-2">
-            <strong>Chord Tones ({voicing.totalChordTones} total):</strong>
-          </div>
-          <div className="text-sm text-amber-800 mb-3">
-            {Object.values(notes)
-              .map(n => `${n.note} (${INTERVAL_NAMES[n.interval]})`)
-              .join(' • ')}
-          </div>
-          <div className="text-sm text-amber-700 flex flex-wrap gap-4">
-            <span className="font-medium">
-              Unique Intervals: <span className="font-bold">{voicing.uniqueIntervals}</span>
-            </span>
-            <span className="font-medium">
-              Pedals Used: <span className="font-bold">{voicing.pedalCount}</span>
-            </span>
-          </div>
+        {/* Fret Numbers - Fixed Alignment */}
+        <div className="mt-6 flex justify-between relative" style={{ 
+          marginLeft: '5.5rem', // Adjusted to match new string label width
+          marginRight: '7rem' // Match note display width
+        }}>
+          {Array.from({ length: 13 }, (_, i) => (
+            <div
+              key={i}
+              className={`text-xs w-4 text-center font-medium ${i === fret ? 'text-blue-700 font-bold' : 'text-gray-500'}`}
+              style={{
+                position: 'absolute',
+                left: i === 0 ? '0' : i === 12 ? '100%' : `${(i / 12) * 100}%`,
+                transform: i === 0 ? 'none' : i === 12 ? 'translateX(-100%)' : 'translateX(-50%)'
+              }}
+            >
+              {i}
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 };
 
-// Now takes loading as a prop!
+
 const ChordSearch = ({ onSearch, loading }) => {
   const [chordRoot, setChordRoot] = useState('C');
   const [chordType, setChordType] = useState('Major Triad');
@@ -237,7 +285,6 @@ function App() {
           </p>
         </div>
 
-        {/* Pass loading to ChordSearch */}
         <ChordSearch onSearch={handleSearch} loading={loading} />
 
         {loading && (

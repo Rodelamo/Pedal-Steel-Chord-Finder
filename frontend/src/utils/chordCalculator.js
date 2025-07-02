@@ -4,6 +4,22 @@ import { NOTES, NOTE_VALUES } from '../constants/notes';
 import { TUNING } from '../constants/tuning';
 import { COPEDENT, VALID_COMBINATIONS } from '../constants/copedent';
 import { CHORD_TYPES } from '../constants/chords';
+import { OVERRIDES } from '../constants/overrides';
+
+// Helper function for array comparison
+function arraysEqual(a, b) {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  if (a.length !== b.length) return false;
+
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  
+  for (let i = 0; i < sortedA.length; i++) {
+    if (sortedA[i] !== sortedB[i]) return false;
+  }
+  return true;
+}
 
 export class ChordCalculator {
   static noteToSemitone(noteName) {
@@ -19,35 +35,43 @@ export class ChordCalculator {
 
   static applyPedalChanges(openNotes, pedalCombination) {
     const modifiedNotes = { ...openNotes };
-
+    
+    // Apply standard pedal/lever changes
     pedalCombination.forEach(pedal => {
-      if (COPEDENT[pedal]) {
-        if (pedal === 'C') {
-          const changes = COPEDENT[pedal].changes;
-          Object.keys(changes).forEach(stringNum => {
-            const stringNumber = parseInt(stringNum);
-            if (modifiedNotes[stringNumber]) {
-              const openNote = modifiedNotes[stringNumber];
-              const openSemitone = this.noteToSemitone(openNote);
-              const newSemitone = (openSemitone + changes[stringNumber] + 12) % 12;
-              const octave = openNote.match(/\d+$/)?.[0] || '2';
-              modifiedNotes[stringNumber] = NOTES[newSemitone] + octave;
-            }
-          });
-        } else {
-          COPEDENT[pedal].strings.forEach(stringNum => {
-            if (modifiedNotes[stringNum]) {
-              const openNote = modifiedNotes[stringNum];
-              const openSemitone = this.noteToSemitone(openNote);
-              const newSemitone = (openSemitone + COPEDENT[pedal].change + 12) % 12;
-              const octave = openNote.match(/\d+$/)?.[0] || '2';
-              modifiedNotes[stringNum] = NOTES[newSemitone] + octave;
-            }
-          });
-        }
+      const config = COPEDENT[pedal];
+      if (config && config.changes) {
+        config.changes.forEach(({ string, change }) => {
+          const stringNum = string;
+          if (modifiedNotes[stringNum]) {
+            const openNote = modifiedNotes[stringNum];
+            const openSemitone = this.noteToSemitone(openNote);
+            const newSemitone = (openSemitone + change + 12) % 12;
+            const octave = openNote.match(/\d+$/)?.[0] || '2';
+            modifiedNotes[stringNum] = NOTES[newSemitone] + octave;
+          }
+        });
       }
     });
-
+    
+    // Apply override rules - NEW IMPROVED LOGIC
+    for (let stringNum = 1; stringNum <= 12; stringNum++) {
+      // Find matching overrides for this string
+      const matchingOverrides = OVERRIDES.filter(o => 
+        o.string === stringNum && 
+        o.combo.every(p => pedalCombination.includes(p))
+      );
+      
+      if (matchingOverrides.length > 0) {
+        // Apply the first matching override (should only be one per string)
+        const override = matchingOverrides[0];
+        const openNote = TUNING[stringNum];
+        const openSemitone = this.noteToSemitone(openNote);
+        const newSemitone = (openSemitone + override.result + 12) % 12;
+        const octave = openNote.match(/\d+$/)?.[0] || '2';
+        modifiedNotes[stringNum] = NOTES[newSemitone] + octave;
+      }
+    }
+    
     return modifiedNotes;
   }
 
@@ -70,6 +94,12 @@ export class ChordCalculator {
     const isTriad = triads.includes(chordType);
     const minUniqueNotes = isTriad ? 3 : 2;
 
+    // Precompute pedal combination effects for performance
+    const combinationEffects = {};
+    VALID_COMBINATIONS.forEach(combo => {
+      combinationEffects[combo.join('')] = this.applyPedalChanges(TUNING, combo);
+    });
+
     // Helper: checks if two voicings differ on any played string note
     function isDistinctVoicing(existingNotes, newNotes) {
       const allStrings = new Set([...Object.keys(existingNotes), ...Object.keys(newNotes)]);
@@ -90,13 +120,20 @@ export class ChordCalculator {
 
       VALID_COMBINATIONS.forEach(pedalCombo => {
         try {
-          const modifiedTuning = this.applyPedalChanges(TUNING, pedalCombo);
+          const comboKey = pedalCombo.join('');
+          const modifiedTuning = combinationEffects[comboKey];
+          
+          // Get notes for all strings at this fret
+          const allStringNotes = {};
+          for (let stringNum = 1; stringNum <= 12; stringNum++) {
+            allStringNotes[stringNum] = this.getNoteAtFret(modifiedTuning[stringNum], fret);
+          }
 
           const soundingNotes = {};
           const foundIntervals = new Set();
 
           for (let stringNum = 1; stringNum <= 12; stringNum++) {
-            const noteAtFret = this.getNoteAtFret(modifiedTuning[stringNum], fret);
+            const noteAtFret = allStringNotes[stringNum];
             const noteSemitone = NOTE_VALUES[noteAtFret];
 
             if (targetNotes.includes(noteSemitone)) {
@@ -113,12 +150,21 @@ export class ChordCalculator {
             }
           }
 
-          if (foundIntervals.size < minUniqueNotes) return;
+          // Enhanced triad filtering
+          if (isTriad) {
+            const hasAllIntervals = chordTones.every(interval => 
+              foundIntervals.has(interval)
+            );
+            if (!hasAllIntervals) return;
+          } else {
+            if (foundIntervals.size < minUniqueNotes) return;
+          }
 
           fretVoicings.push({
             fret,
             pedalCombo,
             notes: soundingNotes,
+            allStringNotes,  // Store complete string data
             uniqueIntervals: foundIntervals.size,
             pedalCount: pedalCombo.length,
             playedStringsCount: Object.keys(soundingNotes).length,
