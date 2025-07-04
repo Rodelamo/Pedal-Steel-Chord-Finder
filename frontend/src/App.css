@@ -1,3 +1,5 @@
+/* src/App.css */
+
 /* Reset and base styles */
 * {
   box-sizing: border-box;
@@ -290,4 +292,210 @@ code {
   transform: translate(-50%, -50%);
   width: 28px;
   height: 28px;
+}
+
+/* New styles for PDF export functionality */
+.modal {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-box {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  padding: 8px;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+}
+
+tr:hover {
+  background-color: #f5f5f5;
+}
+
+/* For PDF rendering */
+.fretboard-pdf {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+/* Export bubble styles */
+.export-bubble {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  background-color: #3b82f6;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.export-bubble button {
+  background-color: white;
+  color: #3b82f6;
+  border: none;
+  border-radius: 15px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.export-bubble button:hover {
+  background-color: #f1f5f9;
+}
+
+/* Modal styles */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 10px;
+  padding: 20px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* Table styles */
+.export-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.export-table th, 
+.export-table td {
+  padding: 12px;
+  text-align: center;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.export-table th {
+  background-color: #f1f5f9;
+  font-weight: 600;
+}
+
+.export-table tr:hover {
+  background-color: #f8fafc;
+}
+
+.remove-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-weight: bold;
+  padding: 5px 10px;
+}
+
+.remove-btn:hover {
+  background-color: #fee2e2;
+  border-radius: 4px;
+}
+
+/* Button styles */
+.btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+}
+
+.btn-secondary {
+  background-color: #e2e8f0;
+  color: #4a5568;
+  border: none;
+}
+
+.btn-secondary:hover {
+  background-color: #cbd5e1;
+}
+
+.btn-danger {
+  background-color: #ef4444;
+  color: white;
+  border: none;
+}
+
+.btn-danger:hover {
+  background-color: #dc2626;
+}
+
+/* Add to src/App.css */
+.fretboard-pdf-container {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, 
+               Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  background: white;
+  overflow: hidden;
+}
+
+/* Prevent HTML2Canvas rendering issues */
+canvas {
+  display: block;
+}
+
+/* Ensure proper printing */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  .fretboard-pdf-container, .fretboard-pdf-container * {
+    visibility: visible;
+  }
+  
+  .fretboard-pdf-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
 }

@@ -5,6 +5,7 @@ import { TUNING } from '../constants/tuning';
 import { COPEDENT, VALID_COMBINATIONS } from '../constants/copedent';
 import { CHORD_TYPES } from '../constants/chords';
 import { OVERRIDES } from '../constants/overrides';
+import { TRIADS } from '../constants/triads';
 
 // Helper function for array comparison
 function arraysEqual(a, b) {
