@@ -1,4 +1,3 @@
-// src/utils/pdfGenerator.js
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { INTERVAL_NAMES } from '../constants/notes';
@@ -6,372 +5,27 @@ import { OVERRIDES } from '../constants/overrides';
 import { COPEDENT } from '../constants/copedent';
 import { TUNING } from '../constants/tuning';
 
-// Helper function to get override information
-const isOverrideString = (stringNum, pedalCombo) => {
-  return OVERRIDES.some(override => 
-    override.string === stringNum && 
-    override.combo.every(p => pedalCombo.includes(p))
-  );
+// ---- Layout constants from playground ----
+const CHORD_LAYOUT = {
+  headerText:    { x: 28, y: 1,   w: 361, h: 31,  font: 17 },
+  pedalsBg:      { x: 18, y: 28,  w: 373, h: 26,  borderRadius: 10 },
+  pedalsText:    { x: 25, y: 28,  w: 365, h: 26,  font: 14 },
+  tonebarBg:     { x: 18, y: 58,  w: 372, h: 26,  borderRadius: 7 },
+  tonebarText:   { x: 22, y: 58,  w: 368, h: 25,  font: 13 },
+  stringsBlock:  { x: 16, y: 87,  w: 373, h: 371 },
+  fretNumbers:   { x: 77, y: 449, w: 258, h: 32,  font: 13 },
 };
-
-const getOverrideDescription = (stringNum, pedalCombo) => {
-  const override = OVERRIDES.find(o => 
-    o.string === stringNum && 
-    o.combo.every(p => pedalCombo.includes(p))
-  );
-  return override ? override.note : 'Special pitch change applied';
+const FONT_SIZES = {
+  headerText: 17,
+  pedalsText: 14,
+  tonebarText: 13,
+  fretNumbers: 13
 };
+// Playground base size
+const PLAYGROUND_BASE_W = 410;
+const PLAYGROUND_BASE_H = 480;
 
-const getPedalsForString = (stringNum, pedalCombo) => {
-  const affectingPedals = [];
-  pedalCombo.forEach(pedal => {
-    const config = COPEDENT[pedal];
-    if (config && config.changes) {
-      const hasChange = config.changes.some(change => change.string === stringNum);
-      if (hasChange) {
-        affectingPedals.push(pedal);
-      }
-    }
-  });
-  return affectingPedals;
-};
-
-// Create a chord diagram that exactly matches the web GUI styling
-const createChordDiagram = (voicing, chordRoot, chordType, index) => {
-  const container = document.createElement('div');
-  
-  // Main container styling to exactly match Fretboard.js
-  container.style.cssText = `
-    width: 100%;
-    height: 100%;
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    position: relative;
-    overflow: visible;
-    display: flex;
-    flex-direction: column;
-  `;
-  
-  // Index number in top-left corner (order number)
-  const indexNumber = document.createElement('div');
-  indexNumber.style.cssText = `
-    position: absolute;
-    top: -10px;
-    left: -10px;
-    width: 24px;
-    height: 24px;
-    background: #000000;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 12px;
-    z-index: 10;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  `;
-  indexNumber.textContent = index + 1;
-  
-  // Header section matching Fretboard.js
-  const header = document.createElement('div');
-  header.style.cssText = `
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    flex-shrink: 0;
-  `;
-  
-  // Chord title
-  const chordTitle = document.createElement('h3');
-  chordTitle.style.cssText = `
-    font-weight: bold;
-    font-size: 16px;
-    color: #111827;
-    margin: 0;
-  `;
-  chordTitle.textContent = `${chordRoot} ${chordType} - Fret ${voicing.fret}`;
-  
-  // Pedal combination badge
-  const pedalBadge = document.createElement('div');
-  pedalBadge.style.cssText = `
-    font-size: 12px;
-    font-weight: bold;
-    color: #1d4ed8;
-    background: #dbeafe;
-    padding: 4px 8px;
-    border-radius: 6px;
-    white-space: nowrap;
-  `;
-  pedalBadge.textContent = voicing.pedalCombo.length === 0 ? 'Open' : voicing.pedalCombo.join(' + ');
-  
-  header.appendChild(chordTitle);
-  header.appendChild(pedalBadge);
-  
-  // Tone bar info section
-  const toneBarInfo = document.createElement('div');
-  toneBarInfo.style.cssText = `
-    margin-bottom: 12px;
-    padding: 8px;
-    background: #dbeafe;
-    border-radius: 6px;
-    text-align: center;
-    flex-shrink: 0;
-  `;
-  
-  const toneBarText = document.createElement('span');
-  toneBarText.style.cssText = `
-    font-size: 12px;
-    font-weight: 500;
-    color: #1e40af;
-  `;
-  toneBarText.textContent = `Tone Bar at Fret ${voicing.fret} • ${voicing.playedStringsCount} Strings Used`;
-  
-  toneBarInfo.appendChild(toneBarText);
-  
-  // Fretboard section
-  const fretboardSection = document.createElement('div');
-  fretboardSection.style.cssText = `
-    position: relative;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-  `;
-  
-  // Strings container
-  const stringsContainer = document.createElement('div');
-  stringsContainer.style.cssText = `
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    position: relative;
-    flex-grow: 1;
-  `;
-  
-  // Create strings (1-12)
-  for (let stringNum = 1; stringNum <= 12; stringNum++) {
-    const note = voicing.notes[stringNum];
-    const actualNote = voicing.allStringNotes[stringNum];
-    const isChordTone = !!note;
-    const affectingPedals = getPedalsForString(stringNum, voicing.pedalCombo);
-    const isOverride = isChordTone && isOverrideString(stringNum, voicing.pedalCombo);
-    const openNote = TUNING[stringNum].replace(/\d+$/, '');
-    
-    // String row container
-    const stringRow = document.createElement('div');
-    stringRow.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      height: 24px;
-      flex-shrink: 0;
-    `;
-    
-    // String label
-    const stringLabel = document.createElement('div');
-    stringLabel.style.cssText = `
-      width: 60px;
-      font-size: 10px;
-      font-weight: 500;
-      color: #374151;
-      background: #f3f4f6;
-      padding: 2px 6px;
-      border-radius: 3px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
-    `;
-    stringLabel.innerHTML = `<span>S${stringNum}</span><span>•</span><span>${openNote}</span>`;
-    
-    // String line container
-    const stringLineContainer = document.createElement('div');
-    stringLineContainer.style.cssText = `
-      flex: 1;
-      position: relative;
-      height: 6px;
-      background: linear-gradient(to right, #d1d5db, #9ca3af);
-      border-radius: 3px;
-      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
-    `;
-    
-    // Fret marker
-    const fretMarker = document.createElement('div');
-    const fretPosition = Math.min(95, (voicing.fret / 12) * 100);
-    fretMarker.style.cssText = `
-      position: absolute;
-      top: 0;
-      width: 1px;
-      height: 100%;
-      background: #6b7280;
-      box-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
-      left: ${fretPosition}%;
-    `;
-    stringLineContainer.appendChild(fretMarker);
-    
-    // Note indicator
-    if (isChordTone) {
-      const noteIndicator = document.createElement('div');
-      noteIndicator.style.cssText = `
-        position: absolute;
-        top: 50%;
-        left: ${fretPosition}%;
-        transform: translate(-50%, -50%);
-        width: 20px;
-        height: 20px;
-        background: #3b82f6;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
-        border: 1px solid white;
-      `;
-      noteIndicator.textContent = INTERVAL_NAMES[note.interval];
-      stringLineContainer.appendChild(noteIndicator);
-    }
-    
-    // Note info section
-    const noteInfo = document.createElement('div');
-    noteInfo.style.cssText = `
-      display: flex;
-      align-items: center;
-      width: 80px;
-      flex-shrink: 0;
-    `;
-    
-    if (isChordTone) {
-      const noteInfoContainer = document.createElement('div');
-      noteInfoContainer.style.cssText = `
-        display: flex;
-        width: 100%;
-      `;
-      
-      const mainNote = document.createElement('div');
-      mainNote.style.cssText = `
-        font-size: 9px;
-        font-weight: 500;
-        padding: 2px 4px;
-        border-radius: 2px 0 0 2px;
-        flex-grow: 1;
-        background: #dcfce7;
-        border: 1px solid #16a34a;
-        color: #166534;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      `;
-      
-      let noteContent = `<span>${actualNote}</span>`;
-      if (affectingPedals.length > 0) {
-        noteContent += `<span style="margin-left: 2px;">${affectingPedals.map(pedal => 
-          `<span style="border-bottom: 1px dashed #166534; font-size: 8px;">${pedal}</span>`
-        ).join('')}</span>`;
-      }
-      mainNote.innerHTML = noteContent;
-      
-      noteInfoContainer.appendChild(mainNote);
-      
-      if (isOverride) {
-        const overrideIndicator = document.createElement('div');
-        overrideIndicator.style.cssText = `
-          font-size: 8px;
-          font-weight: bold;
-          padding: 2px 4px;
-          border-radius: 0 2px 2px 0;
-          background: #fef3c7;
-          border: 1px solid #d97706;
-          border-left: 0;
-          color: #92400e;
-          width: 20px;
-          text-align: center;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        `;
-        overrideIndicator.textContent = 'OR!';
-        noteInfoContainer.appendChild(overrideIndicator);
-      }
-      
-      noteInfo.appendChild(noteInfoContainer);
-    } else {
-      const noNote = document.createElement('div');
-      noNote.style.cssText = `
-        font-size: 9px;
-        font-weight: 500;
-        padding: 2px 4px;
-        border-radius: 2px;
-        width: 100%;
-        text-align: center;
-        background: #fee2e2;
-        border: 1px solid #dc2626;
-        color: #dc2626;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      `;
-      noNote.textContent = '✗';
-      noteInfo.appendChild(noNote);
-    }
-    
-    stringRow.appendChild(stringLabel);
-    stringRow.appendChild(stringLineContainer);
-    stringRow.appendChild(noteInfo);
-    stringsContainer.appendChild(stringRow);
-  }
-  
-  // Fret numbers section
-  const fretNumbers = document.createElement('div');
-  fretNumbers.style.cssText = `
-    margin-top: 12px;
-    display: flex;
-    justify-content: space-between;
-    position: relative;
-    margin-left: 68px;
-    margin-right: 88px;
-    height: 16px;
-    flex-shrink: 0;
-  `;
-  
-  for (let i = 0; i <= 12; i++) {
-    const fretNumber = document.createElement('div');
-    fretNumber.style.cssText = `
-      font-size: 10px;
-      font-weight: ${i === voicing.fret ? 'bold' : '500'};
-      color: ${i === voicing.fret ? '#1d4ed8' : '#6b7280'};
-      text-align: center;
-      width: 12px;
-      position: absolute;
-      left: ${i === 0 ? '0' : i === 12 ? '100%' : `${(i / 12) * 100}%`};
-      transform: ${i === 0 ? 'none' : i === 12 ? 'translateX(-100%)' : 'translateX(-50%)'};
-      line-height: 1;
-    `;
-    fretNumber.textContent = i;
-    fretNumbers.appendChild(fretNumber);
-  }
-  
-  // Assemble the diagram
-  container.appendChild(indexNumber);
-  container.appendChild(header);
-  container.appendChild(toneBarInfo);
-  fretboardSection.appendChild(stringsContainer);
-  fretboardSection.appendChild(fretNumbers);
-  container.appendChild(fretboardSection);
-  
-  return container;
-};
-
-// Create placeholder for empty grid slots
+// Helper function for placeholders
 const createPlaceholder = () => {
   const placeholder = document.createElement('div');
   placeholder.style.cssText = `
@@ -392,6 +46,251 @@ const createPlaceholder = () => {
   return placeholder;
 };
 
+const createChordDiagram = (voicing, chordRoot, chordType, index, cellWidthPx, cellHeightPx) => {
+  // Scale to fit cell
+  const scale = Math.min(cellWidthPx / PLAYGROUND_BASE_W, cellHeightPx / PLAYGROUND_BASE_H);
+
+  // Wrapper for scaling
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = `
+    width: ${cellWidthPx}px;
+    height: ${cellHeightPx}px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    background: white;
+  `;
+
+  // Main diagram at base size, scaled
+  const diagram = document.createElement('div');
+  diagram.style.cssText = `
+    width: ${PLAYGROUND_BASE_W}px;
+    height: ${PLAYGROUND_BASE_H}px;
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%) scale(${scale});
+    transform-origin: top left;
+    background: none;
+    overflow: visible;
+  `;
+
+  // HEADER TEXT
+  const header = document.createElement('div');
+  header.style.cssText = `
+    position: absolute;
+    left: ${CHORD_LAYOUT.headerText.x}px;
+    top: ${CHORD_LAYOUT.headerText.y}px;
+    width: ${CHORD_LAYOUT.headerText.w}px;
+    height: ${CHORD_LAYOUT.headerText.h}px;
+    font-size: ${FONT_SIZES.headerText}px;
+    font-weight: bold;
+    color: #111827;
+    line-height: ${CHORD_LAYOUT.headerText.h}px;
+    text-align: center;
+    white-space: nowrap;
+    z-index: 10;
+  `;
+  header.textContent = `${chordRoot} ${chordType} - Fret ${voicing.fret}`;
+  diagram.appendChild(header);
+
+  // PEDALS BG (behind pedals text)
+  const pedalsBg = document.createElement('div');
+  pedalsBg.style.cssText = `
+    position: absolute;
+    left: ${CHORD_LAYOUT.pedalsBg.x}px;
+    top: ${CHORD_LAYOUT.pedalsBg.y}px;
+    width: ${CHORD_LAYOUT.pedalsBg.w}px;
+    height: ${CHORD_LAYOUT.pedalsBg.h}px;
+    background: #dbeafe;
+    border-radius: ${CHORD_LAYOUT.pedalsBg.borderRadius}px;
+    z-index: 1;
+  `;
+  diagram.appendChild(pedalsBg);
+
+  // PEDALS TEXT
+  const pedalsText = document.createElement('div');
+  pedalsText.style.cssText = `
+    position: absolute;
+    left: ${CHORD_LAYOUT.pedalsText.x}px;
+    top: ${CHORD_LAYOUT.pedalsText.y}px;
+    width: ${CHORD_LAYOUT.pedalsText.w}px;
+    height: ${CHORD_LAYOUT.pedalsText.h}px;
+    font-size: ${FONT_SIZES.pedalsText}px;
+    font-weight: bold;
+    color: #1d4ed8;
+    line-height: ${CHORD_LAYOUT.pedalsText.h}px;
+    text-align: center;
+    white-space: nowrap;
+    z-index: 2;
+  `;
+  pedalsText.textContent = voicing.pedalCombo.length === 0 ? 'Open' : voicing.pedalCombo.join(' + ');
+  diagram.appendChild(pedalsText);
+
+  // TONEBAR BG (behind tonebar text)
+  const tonebarBg = document.createElement('div');
+  tonebarBg.style.cssText = `
+    position: absolute;
+    left: ${CHORD_LAYOUT.tonebarBg.x}px;
+    top: ${CHORD_LAYOUT.tonebarBg.y}px;
+    width: ${CHORD_LAYOUT.tonebarBg.w}px;
+    height: ${CHORD_LAYOUT.tonebarBg.h}px;
+    background: #dbeafe;
+    border-radius: ${CHORD_LAYOUT.tonebarBg.borderRadius}px;
+    z-index: 1;
+  `;
+  diagram.appendChild(tonebarBg);
+
+  // TONEBAR TEXT
+  const tonebarText = document.createElement('div');
+  tonebarText.style.cssText = `
+    position: absolute;
+    left: ${CHORD_LAYOUT.tonebarText.x}px;
+    top: ${CHORD_LAYOUT.tonebarText.y}px;
+    width: ${CHORD_LAYOUT.tonebarText.w}px;
+    height: ${CHORD_LAYOUT.tonebarText.h}px;
+    font-size: ${FONT_SIZES.tonebarText}px;
+    color: #1e40af;
+    line-height: ${CHORD_LAYOUT.tonebarText.h}px;
+    text-align: center;
+    border-radius: 6px;
+    white-space: nowrap;
+    z-index: 2;
+  `;
+  tonebarText.textContent = `Tone Bar at Fret ${voicing.fret} • ${voicing.playedStringsCount} Strings Used`;
+  diagram.appendChild(tonebarText);
+
+  // STRINGS BLOCK (everything inside scales proportionally)
+  const stringsBlock = document.createElement('div');
+  stringsBlock.style.cssText = `
+    position: absolute;
+    left: ${CHORD_LAYOUT.stringsBlock.x}px;
+    top: ${CHORD_LAYOUT.stringsBlock.y}px;
+    width: ${CHORD_LAYOUT.stringsBlock.w}px;
+    height: ${CHORD_LAYOUT.stringsBlock.h}px;
+    background: rgba(0,0,0,0.01);
+    border-radius: 8px;
+    z-index: 5;
+    overflow: visible;
+  `;
+  // All elements below will be scaled relative to block size:
+  const baseW = 373, baseH = 371; // match playground
+  const scaleX = CHORD_LAYOUT.stringsBlock.w / baseW;
+  const scaleY = CHORD_LAYOUT.stringsBlock.h / baseH;
+  const stringCount = 12;
+  const labelW = 52 * scaleX;
+  const rowH = CHORD_LAYOUT.stringsBlock.h / stringCount;
+  const noteR = 11 * scaleX;
+  const infoBoxW = 44 * scaleX;
+  const stringNames = ["F#","D#","G#","E","B","G#","F#","E","B","G#","E","B"];
+  for (let i = 0; i < stringCount; ++i) {
+    const y = rowH * i;
+
+    // Label
+    const label = document.createElement('div');
+    label.style.position = "absolute";
+    label.style.left = 0 + "px";
+    label.style.top = y + "px";
+    label.style.width = labelW + "px";
+    label.style.height = rowH + "px";
+    label.style.background = '#f3f4f6';
+    label.style.color = '#374151';
+    label.style.fontSize = (10 * scaleX) + "px";
+    label.style.borderRadius = '3px';
+    label.style.display = 'flex';
+    label.style.justifyContent = 'space-between';
+    label.style.alignItems = 'center';
+    label.style.padding = '2px 6px';
+    label.textContent = `S${i+1} • ${stringNames[i]}`;
+    stringsBlock.appendChild(label);
+
+    // Fret line
+    const fretLine = document.createElement('div');
+    fretLine.style.position = 'absolute';
+    fretLine.style.left = (labelW+6) + "px";
+    fretLine.style.top = (y+rowH/2-3*scaleY) + "px";
+    fretLine.style.width = (CHORD_LAYOUT.stringsBlock.w-labelW-infoBoxW-20*scaleX) + "px";
+    fretLine.style.height = (6*scaleY) + "px";
+    fretLine.style.background = 'linear-gradient(to right, #d1d5db, #9ca3af)';
+    fretLine.style.borderRadius = (3*scaleY) + 'px';
+    fretLine.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.1)';
+    stringsBlock.appendChild(fretLine);
+
+    // Note indicator (some rows)
+    if([1,2,4,5,7,9,10].includes(i)) {
+      const note = document.createElement('div');
+      note.style.position = "absolute";
+      note.style.left = (labelW+60*scaleX) + "px";
+      note.style.top = (y+rowH/2-noteR) + "px";
+      note.style.width = (noteR*2) + "px";
+      note.style.height = (noteR*2) + "px";
+      note.style.background = "#3b82f6";
+      note.style.color = "#fff";
+      note.style.borderRadius = "50%";
+      note.style.display = "flex";
+      note.style.alignItems = "center";
+      note.style.justifyContent = "center";
+      note.style.fontWeight = "bold";
+      note.style.fontSize = (12 * scaleX) + "px";
+      note.style.boxShadow = '0 2px 4px rgba(0,0,0,0.25)';
+      note.textContent = ["5","R","3","R","5","R","5"][[1,2,4,5,7,9,10].indexOf(i)];
+      stringsBlock.appendChild(note);
+    }
+    // Info box (green)
+    const info = document.createElement('div');
+    info.style.position = "absolute";
+    info.style.left = (CHORD_LAYOUT.stringsBlock.w-infoBoxW) + "px";
+    info.style.top = y + "px";
+    info.style.width = infoBoxW + "px";
+    info.style.height = rowH + "px";
+    info.style.background = '#dcfce7';
+    info.style.color = '#166534';
+    info.style.display = 'flex';
+    info.style.justifyContent = 'center';
+    info.style.alignItems = 'center';
+    info.style.fontWeight = 'bold';
+    info.style.fontSize = (11 * scaleX) + 'px';
+    info.style.border = '1px solid #16a34a';
+    info.style.borderRadius = '4px';
+    info.textContent = "G";
+    stringsBlock.appendChild(info);
+  }
+  diagram.appendChild(stringsBlock);
+
+  // FRET NUMBERS (bottom)
+  const fretNumbers = document.createElement('div');
+  fretNumbers.style.position = "absolute";
+  fretNumbers.style.left = CHORD_LAYOUT.fretNumbers.x + "px";
+  fretNumbers.style.top = CHORD_LAYOUT.fretNumbers.y + "px";
+  fretNumbers.style.width = CHORD_LAYOUT.fretNumbers.w + "px";
+  fretNumbers.style.height = CHORD_LAYOUT.fretNumbers.h + "px";
+  fretNumbers.style.display = "flex";
+  fretNumbers.style.justifyContent = "space-between";
+  fretNumbers.style.alignItems = "center";
+  fretNumbers.style.fontSize = (FONT_SIZES.fretNumbers || 13) + "px";
+  fretNumbers.style.color = "#6b7280";
+  fretNumbers.style.textAlign = "center";
+  fretNumbers.style.zIndex = 10;
+  for(let i=0;i<=12;i++) {
+    const num = document.createElement('div');
+    num.style.flex = '0 0 auto';
+    num.style.width = 'auto';
+    num.style.textAlign = 'center';
+    num.style.fontWeight = i === voicing.fret ? "bold" : "500";
+    num.style.color = i === voicing.fret ? "#1d4ed8" : "#6b7280";
+    num.textContent = i;
+    fretNumbers.appendChild(num);
+  }
+  diagram.appendChild(fretNumbers);
+
+  wrapper.appendChild(diagram);
+  return wrapper;
+};
+
+// ...imports and CHORD_LAYOUT as before...
+
+// PDF GENERATION
 export const generatePDF = async (voicings) => {
   if (!voicings || voicings.length === 0) {
     alert('No voicings selected for PDF export.');
@@ -401,29 +300,27 @@ export const generatePDF = async (voicings) => {
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  
-  // Grid configuration - exactly 2x3 with 1mm gaps
-  const margin = 10;
-  const gap = 1;
+
+  // Grid configuration
+  const gap = 1; // 1mm black line
   const cols = 2;
   const rows = 3;
   const itemsPerPage = cols * rows;
-  
-  // Calculate exact cell dimensions
-  const availableWidth = pageWidth - (margin * 2) - (gap * (cols - 1));
-  const availableHeight = pageHeight - (margin * 2) - (gap * (rows - 1));
-  const cellWidth = availableWidth / cols;
-  const cellHeight = availableHeight / rows;
-  
-  // Convert to pixels (assuming 96 DPI)
-  const pixelRatio = 96 / 25.4; // pixels per mm
+
+  // Calculate exact cell dimensions (no margins)
+  const totalGapW = gap * (cols - 1);
+  const totalGapH = gap * (rows - 1);
+  const cellWidth = (pageWidth - totalGapW) / cols;
+  const cellHeight = (pageHeight - totalGapH) / rows;
+
+  // Convert to pixels (96 DPI)
+  const pixelRatio = 96 / 25.4;
   const containerWidth = Math.round(pageWidth * pixelRatio);
   const containerHeight = Math.round(pageHeight * pixelRatio);
   const cellWidthPx = Math.round(cellWidth * pixelRatio);
   const cellHeightPx = Math.round(cellHeight * pixelRatio);
-  const marginPx = Math.round(margin * pixelRatio);
-  const gapPx = Math.round(gap * pixelRatio);
-  
+  const gapPx = Math.max(1, Math.round(gap * pixelRatio));
+
   // Create off-screen rendering container
   const container = document.createElement('div');
   container.style.cssText = `
@@ -433,65 +330,67 @@ export const generatePDF = async (voicings) => {
     width: ${containerWidth}px;
     height: ${containerHeight}px;
     background: white;
-    padding: ${marginPx}px;
     box-sizing: border-box;
     display: grid;
     grid-template-columns: repeat(${cols}, ${cellWidthPx}px);
     grid-template-rows: repeat(${rows}, ${cellHeightPx}px);
-    gap: ${gapPx}px;
+    gap: 0;
     z-index: 9999;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px;
   `;
-  
+
   document.body.appendChild(container);
-  
+
   try {
     const totalPages = Math.ceil(voicings.length / itemsPerPage);
-    
+
     for (let page = 0; page < totalPages; page++) {
       if (page > 0) pdf.addPage();
-      
+
       const pageVoicings = voicings.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
       container.innerHTML = '';
-      
-      // Create grid items - always 6 items per page
+
       for (let i = 0; i < itemsPerPage; i++) {
         const cell = document.createElement('div');
         cell.style.cssText = `
-          width: 100%;
-          height: 100%;
+          width: ${cellWidthPx}px;
+          height: ${cellHeightPx}px;
           overflow: hidden;
           position: relative;
           background: white;
+          box-sizing: border-box;
+          border-right: ${((i % cols) < cols - 1) ? gapPx + 'px solid black' : 'none'};
+          border-bottom: ${(i < (cols * (rows - 1))) ? gapPx + 'px solid black' : 'none'};
         `;
-        
+
         if (i < pageVoicings.length) {
           const globalIndex = page * itemsPerPage + i;
           const diagram = createChordDiagram(
             pageVoicings[i].voicing,
             pageVoicings[i].chordRoot,
             pageVoicings[i].chordType,
-            globalIndex
+            globalIndex,
+            cellWidthPx,
+            cellHeightPx
           );
+          // FILL the cell, no centering
+          diagram.style.position = "absolute";
+          diagram.style.left = "0";
+          diagram.style.top = "0";
+          diagram.style.width = "100%";
+          diagram.style.height = "100%";
           cell.appendChild(diagram);
         } else {
           cell.appendChild(createPlaceholder());
         }
-        
         container.appendChild(cell);
       }
-      
-      // Wait for DOM to be ready and fonts to load
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Debug: Check if container is visible
-      console.log('Container dimensions:', container.offsetWidth, 'x', container.offsetHeight);
-      console.log('Container children:', container.children.length);
-      
-      // Render to canvas with optimized settings
+
+      await new Promise(resolve => setTimeout(resolve, 400));
+
       const canvas = await html2canvas(container, {
-        scale: 2, // Reasonable scale for good quality
+        scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: 'white',
@@ -505,12 +404,9 @@ export const generatePDF = async (voicings) => {
         foreignObjectRendering: false,
         removeContainer: false
       });
-      
-      console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
-      
+
       const imgData = canvas.toDataURL('image/png', 0.95);
-      
-      // Add image to PDF with exact dimensions
+
       pdf.addImage(
         imgData,
         'PNG',
@@ -522,16 +418,14 @@ export const generatePDF = async (voicings) => {
         'FAST'
       );
     }
-    
-    // Save the PDF
+
     const timestamp = new Date().toISOString().split('T')[0];
     pdf.save(`PedalSteel-ChordVoicings-${timestamp}.pdf`);
-    
+
   } catch (error) {
     console.error('PDF generation error:', error);
     alert('Failed to generate PDF. Please try again.');
   } finally {
-    // Clean up
     if (document.body.contains(container)) {
       document.body.removeChild(container);
     }
