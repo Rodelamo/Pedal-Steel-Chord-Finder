@@ -29,9 +29,16 @@ export class ChordCalculator {
   }
 
   static getNoteAtFret(openNote, fret) {
-    const openSemitone = this.noteToSemitone(openNote);
-    const newSemitone = (openSemitone + fret) % 12;
-    return NOTES[newSemitone];
+    const baseNote = openNote.replace(/\d+$/, '');
+    const octaveMatch = openNote.match(/\d+$/);
+    let octave = octaveMatch ? parseInt(octaveMatch[0]) : 2;
+    
+    const openSemitone = this.noteToSemitone(baseNote);
+    const totalSemitones = openSemitone + fret;
+    const newSemitone = (totalSemitones % 12 + 12) % 12; // Ensure positive value
+    const octaveShift = Math.floor(totalSemitones / 12);
+    
+    return NOTES[newSemitone] + (octave + octaveShift);
   }
 
   static applyPedalChanges(openNotes, pedalCombination) {
@@ -45,16 +52,22 @@ export class ChordCalculator {
           const stringNum = string;
           if (modifiedNotes[stringNum]) {
             const openNote = modifiedNotes[stringNum];
-            const openSemitone = this.noteToSemitone(openNote);
-            const newSemitone = (openSemitone + change + 12) % 12;
-            const octave = openNote.match(/\d+$/)?.[0] || '2';
-            modifiedNotes[stringNum] = NOTES[newSemitone] + octave;
+            const baseNote = openNote.replace(/\d+$/, '');
+            const octaveMatch = openNote.match(/\d+$/);
+            let octave = octaveMatch ? parseInt(octaveMatch[0]) : 2;
+            
+            const openSemitone = this.noteToSemitone(baseNote);
+            const totalSemitones = openSemitone + change;
+            const newSemitone = (totalSemitones % 12 + 12) % 12; // Ensure positive value
+            const octaveShift = Math.floor(totalSemitones / 12);
+            
+            modifiedNotes[stringNum] = NOTES[newSemitone] + (octave + octaveShift);
           }
         });
       }
     });
     
-    // Apply override rules - NEW IMPROVED LOGIC
+    // Apply override rules
     for (let stringNum = 1; stringNum <= 12; stringNum++) {
       // Find matching overrides for this string
       const matchingOverrides = OVERRIDES.filter(o => 
@@ -66,10 +79,18 @@ export class ChordCalculator {
         // Apply the first matching override (should only be one per string)
         const override = matchingOverrides[0];
         const openNote = TUNING[stringNum];
-        const openSemitone = this.noteToSemitone(openNote);
-        const newSemitone = (openSemitone + override.result + 12) % 12;
-        const octave = openNote.match(/\d+$/)?.[0] || '2';
-        modifiedNotes[stringNum] = NOTES[newSemitone] + octave;
+        const baseNote = openNote.replace(/\d+$/, '');
+        const octaveMatch = openNote.match(/\d+$/);
+        let octave = octaveMatch ? parseInt(octaveMatch[0]) : 2;
+        
+        const openSemitone = this.noteToSemitone(baseNote);
+        
+        if (override.result !== null) {
+          const totalSemitones = openSemitone + override.result;
+          const newSemitone = (totalSemitones % 12 + 12) % 12; // Ensure positive value
+          const octaveShift = Math.floor(totalSemitones / 12);
+          modifiedNotes[stringNum] = NOTES[newSemitone] + (octave + octaveShift);
+        }
       }
     }
     
@@ -135,7 +156,8 @@ export class ChordCalculator {
 
           for (let stringNum = 1; stringNum <= 12; stringNum++) {
             const noteAtFret = allStringNotes[stringNum];
-            const noteSemitone = NOTE_VALUES[noteAtFret];
+            const noteBase = noteAtFret.replace(/\d+$/, ''); // Remove octave for semitone calculation
+            const noteSemitone = NOTE_VALUES[noteBase];
 
             if (targetNotes.includes(noteSemitone)) {
               const intervalIndex = targetNotes.indexOf(noteSemitone);

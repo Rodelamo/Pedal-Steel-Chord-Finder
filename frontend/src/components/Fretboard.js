@@ -1,10 +1,11 @@
 // src/components/Fretboard.js
-import React from 'react';
+import React, { useState } from 'react'; // Added useState
 import { OVERRIDES } from '../constants/overrides';
 import { COPEDENT } from '../constants/copedent';
 import { TUNING } from '../constants/tuning';
 import { INTERVAL_NAMES } from '../constants/notes';
 import { useSelectedVoicings } from '../context/SelectedVoicingsContext';
+import SoundService from '../utils/soundService'; // Added sound service
 
 function arraysEqual(a, b) {
   if (a === b) return true;
@@ -22,7 +23,8 @@ function arraysEqual(a, b) {
 
 const Fretboard = ({ voicing, chordRoot, chordType }) => {
   if (!voicing) return null;
-
+  
+  const [isPlaying, setIsPlaying] = useState(false); // Added play state
   const { fret, pedalCombo, notes, allStringNotes, playedStringsCount } = voicing;
   const { addVoicing, removeVoicing, selectedVoicings } = useSelectedVoicings();
 
@@ -88,6 +90,36 @@ const Fretboard = ({ voicing, chordRoot, chordType }) => {
     }
   };
 
+  // Play entire chord (lowest to highest string)
+  const playChord = () => {
+    setIsPlaying(true);
+    
+    // Get notes from lowest (string 12) to highest (string 1)
+    const notesToPlay = [];
+    for (let stringNum = 12; stringNum >= 1; stringNum--) {
+      if (voicing.notes[stringNum]) {
+        notesToPlay.push(voicing.notes[stringNum].note);
+      }
+    }
+    
+    // Play each note sequentially
+    notesToPlay.forEach((note, index) => {
+      setTimeout(() => {
+        const frequency = SoundService.noteNameToFrequency(note);
+        SoundService.playTone(frequency, 0.33);
+      }, index * 400); // 400ms = note duration (333ms) + gap (67ms)
+    });
+    
+    // Reset play state after all notes
+    setTimeout(() => setIsPlaying(false), notesToPlay.length * 400);
+  };
+
+  // Play single note
+  const playSingleNote = (note) => {
+    const frequency = SoundService.noteNameToFrequency(note);
+    SoundService.playTone(frequency, 0.33);
+  };
+
   return (
     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-md mb-6">
       <div className="flex justify-between items-center mb-4">
@@ -112,8 +144,31 @@ const Fretboard = ({ voicing, chordRoot, chordType }) => {
             {chordRoot} {chordType} - Fret {fret}
           </h3>
         </div>
-        <div className="text-base font-bold text-blue-700 bg-blue-100 px-3 py-1 rounded-lg">
-          {pedalCombo.length === 0 ? 'Open' : pedalCombo.join(' + ')}
+        <div className="flex items-center gap-3">
+          <div className="text-base font-bold text-blue-700 bg-blue-100 px-3 py-1 rounded-lg">
+            {pedalCombo.length === 0 ? 'Open' : pedalCombo.join(' + ')}
+          </div>
+          
+          {/* Play Chord Button */}
+          <button
+            onClick={playChord}
+            disabled={isPlaying}
+            className={`play-button flex items-center px-3 py-1 rounded-md ${
+              isPlaying 
+                ? 'bg-gray-400 text-white cursor-not-allowed' 
+                : 'bg-green-500 hover:bg-green-600 text-white'
+            }`}
+          >
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="h-5 w-5 mr-1" 
+              viewBox="0 0 20 20" 
+              fill="currentColor"
+            >
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+            </svg>
+            {isPlaying ? 'Playing...' : 'Play'}
+          </button>
         </div>
       </div>
 
@@ -154,7 +209,8 @@ const Fretboard = ({ voicing, chordRoot, chordType }) => {
 
                   {isChordTone && (
                     <div
-                      className="absolute top-1/2 transform -translate-y-1/2 w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md border-2 border-white"
+                      onClick={() => playSingleNote(actualNote)} // Added click handler
+                      className="absolute top-1/2 transform -translate-y-1/2 w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md border-2 border-white cursor-pointer hover:scale-110 transition-transform duration-200"
                       style={{ 
                         left: `${(fret / 12) * 100}%`,
                         marginLeft: '-0.875rem'
